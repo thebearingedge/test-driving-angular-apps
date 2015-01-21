@@ -489,7 +489,7 @@ describe('parkFactory', function () {
 
 ##### Mocking A Web Service API: `$httpBackend`
 
-Part of keeping our tests manageable includes isolating our System Under Test as much as possible. Our current System Under Test is `parkFactory`. To keep it isolated, we want to avoid any real XHR requests from being sent from the browser. There are a few reasons for this, here are some of them:
+Part of keeping our tests manageable includes isolating our System Under Test as much as possible. Our current System Under Test is `parkFactory`. To keep it isolated, we want to avoid any real XHR requests from being sent by the browser. There are a few reasons for this, here are some of them:
 
 - I/O, network or otherwise, is *way* slower than in-memory code execution
 - Anomalies in network integrity could make our tests unreliable
@@ -583,7 +583,7 @@ SUMMARY:
 ✔ 2 tests completed
 ```
 
-If you are familiar with Mocha, you may already know that a test that does not result in a thrown exception will *pass*. Throwing is what an assertion library such as Chai will do for us, in addition to offering a description of why. `$httpBackend` can throw for us too, but we need to explicitly ask it to.
+If you are familiar with Mocha, you may already know that a test that does not result in a thrown exception will *pass*. Throwing is what an assertion library like Chai will do for us, in addition to offering a description of why. `$httpBackend` can throw for us too, but we need to explicitly ask it to.
 
 ```javascript
 it('should POST a new park', function () {
@@ -733,9 +733,61 @@ afterEach(function () {
 });
 ```
 
-##### Code Branches and Spies
+##### Code Branches and Stubs
 
+Let's fast-forward a little bit. Our `parkFactory` test suite does not need to evolve much more. Given what we've covered so far to test-drive our `create` method, similar tests and implementations can be written for `getList`, `getOne`, and `update`. You can look at the project source code and tests to get caught up if you get stuck or don't want to try on your own.
 
+We have an opportunity to generalize the API of `parkFactory` a little bit. Rather than forcing a controller to decide whether to call `create` or `update`, we can add a convenience method, `save`. This method should delegate to `update` if the park details it receives contains an `id` property, otherwise delegate to `create`.
+
+```javascript
+describe('#save', function () {
+
+  it('should call #update if the details contain an ID');
+  it('should call #create if the details do not contain an ID');
+
+});
+```
+
+Now, we already know that `create` and `update` already work, so we aren't interested in exercising them. And we don't want to set up `$httpBackend` again just to check which was called by `save`. So we are going to use `sinon`.
+
+`sinon.stub` can be used to wrap a function and record information about whether it was called and with what arguments. A `spy` is also capable of this, but we want to prevent `create` and `update` from in turn hitting `$httpBackend`. We don't want any custom responses from `create` or `update`, but we still want code execution to effectively stop with them.
+
+```javascript
+describe('#save', function () {
+
+  beforeEach(function () {
+    sinon.stub(parkFactory, 'update');
+    sinon.stub(parkFactory, 'create');
+  });
+
+  it('should call #update if the details contain an ID', function () {
+
+    parkFactory.save(parkUpdates);
+
+    expect(parkFactory.update).to.have.been.calledWith(parkUpdates);
+    expect(parkFactory.create).not.to.have.been.called;
+
+  });
+
+  it('should call #create if the details do NOT contain an ID', function () {
+
+    parkFactory.save(newPark);
+
+    expect(parkFactory.create).to.have.been.calledWith(newPark);
+    expect(parkFactory.update).not.to.have.been.called;
+
+  });
+
+});
+```
+
+And the passing one-liner:
+
+```javascript
+function save(parkDetails) {
+  return parkDetails.id ? factory.update(parkDetails) : factory.create(parkDetails);
+}
+```
 
 ### TODO
 

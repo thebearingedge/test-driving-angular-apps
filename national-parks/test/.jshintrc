@@ -6,6 +6,7 @@
     "it": true,
     "expect": true,
     "module": true,
-    "inject": true
+    "inject": true,
+    "sinon": true
   }
 }
