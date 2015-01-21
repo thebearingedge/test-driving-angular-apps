@@ -386,8 +386,8 @@ module.exports = function(config) {
     ],
 
     files: [
-      'bower_components/angularjs/angular.js',
-      'bower_components/angularjs/angular-mocks.js',
+      'bower_components/angular/angular.js',
+      'bower_components/angular-mocks/angular-mocks.js',
       'app/scripts/**/*.js',
       'app/test/**/*Spec.js'
     ],
@@ -524,7 +524,7 @@ describe('parkFactory', function () {
       var newPark = { name: 'Arches', state: 'Utah' };
       var savedPark = { id: 4, name: 'Arches', state: 'Utah' };
 
-      $httpBackend.expectPOST('/api/parks', parkDetails)
+      $httpBackend.expectPOST('/api/parks', newPark)
         .respond(200, savedPark);
 
       // do something to satisfy the expectation
@@ -756,6 +756,7 @@ Now, we already know that `create` and `update` already work, so we aren't inter
 describe('#save', function () {
 
   beforeEach(function () {
+    // stub out methods to prevent $httpBackend interaction
     sinon.stub(parkFactory, 'update');
     sinon.stub(parkFactory, 'create');
   });
@@ -764,6 +765,7 @@ describe('#save', function () {
 
     parkFactory.save(parkUpdates);
 
+    // assert that the correct code branch was followed
     expect(parkFactory.update).to.have.been.calledWith(parkUpdates);
     expect(parkFactory.create).not.to.have.been.called;
 
@@ -773,6 +775,7 @@ describe('#save', function () {
 
     parkFactory.save(newPark);
 
+    // assert that the correct code branch was followed
     expect(parkFactory.create).to.have.been.calledWith(newPark);
     expect(parkFactory.update).not.to.have.been.called;
 
