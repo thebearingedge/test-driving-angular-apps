@@ -1,0 +1,20 @@
+{
+  "name": "national-parks",
+  "version": "0.0.0",
+  "homepage": "https://github.com/thebearingedge/test-driving-angular-apps",
+  "authors": [
+    "Tim Davis <thebearingedge@gmail.com>"
+  ],
+  "license": "MIT",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "angular": "~1.3.10",
+    "angular-mocks": "~1.3.10"
+  }
+}
