@@ -1,2 +1,2 @@
-# test-driving-angular-apps
-Building a simple Angular App, Test-First
+Building A Simple AngularJS App, Test-First
+----
