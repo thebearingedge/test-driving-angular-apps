@@ -205,3 +205,159 @@ Finished in 0.007 secs / 0.001 secs
 SUMMARY:
 ✔ 1 tests completed
 ```
+
+---
+
+### Angular Mocks and the "National Parks" `constant`
+
+The Angular Mocks library ships with a handful of functions that we'll be using to craft our unit tests.
+
+##### `module`
+
+The first is [`module`](https://docs.angularjs.org/api/ngMock/function/angular.mock.module). As the docs state, `module` builds our app's (or module's) `$injector` service, registering the module's components for injection. All of our angular-specific tests will rely on referencing the `nationalParks` module, so we can use `module` to build the `$injector` "before each" test. `beforeEach` is a Mocha function that will execute in advance of each following test, allowing us to centralize setup and avoid repetition.
+
+```javascript
+// national-parks/test/appSpec.js
+
+describe('National Parks', function () {
+
+  beforeEach(function () {
+
+    // use module to build the $injector service
+    module('nationalParks');
+
+  });
+
+  describe('app title', function () {
+
+    // karma skips empty tests
+    it('should be "National Parks"');
+
+  });
+
+});
+```
+
+After creating and saving the above `appSpec.js`, Karma should report that it has skipped our empty test.
+
+```bash
+Start:
+  National Parks
+    app title
+      ✖ should be "National Parks" (skipped)
+
+Finished in 0.005 secs / 0 secs
+
+SUMMARY:
+✔ 0 tests completed
+ℹ 1 tests skipped
+```
+
+##### `inject`
+
+The next Angular Mocks function we'll use is [`inject`](https://docs.angularjs.org/api/ngMock/function/angular.mock.inject). `inject` will actually instantiate the `$injector` service created when we called `module` and is used to inject references to registered components into our tests. These components include AngularJS services as well as components we've registered on the `nationalParks` module.
+
+As described in `appSpec.js`, we want to test that the app is titled "National Parks". Once `appTitle` is injected into the test, we can make assertions against it.
+
+```javascript
+// national-parks/test/appSpec.js
+
+describe('National Parks', function () {
+
+  beforeEach(function () {
+
+    module('nationalParks');
+
+  });
+
+  describe('app title', function () {
+
+    // inject the 'appTitle' component of 'nationalParks'
+    it('should be "National Parks"', inject(function (appTitle) {
+
+      expect(appTitle).to.equal('National Parks');
+
+    }));
+
+  });
+
+});
+```
+
+Save the above changes, and we receive the following failure:
+
+```bash
+Start:
+  National Parks
+    app title
+      ✖ should be "National Parks"
+
+Finished in 0.015 secs / 0.008 secs
+
+SUMMARY:
+✔ 0 tests completed
+✖ 1 tests failed
+
+FAILED TESTS:
+  National Parks
+    app title
+      ✖ should be "National Parks"
+      Error: [$injector:modulerr] Failed to instantiate module nationalParks due to:
+      Error: [$injector:nomod] Module 'nationalParks' is not available! You either misspelled the module name or forgot to load it. If registering a module ensure that you specify the dependencies as the second argument.
+```
+
+Of course, we haven't written a single line of `nationalParks` so the module's `$injector` service could not be built. Let's create the module, `app.js` in our `src/` directory and see what happens.
+
+```javascript
+// national-parks/src/app.js
+
+;(function () {
+  'use strict';
+
+  angular.module('nationalParks', []);
+
+}());
+```
+
+Now Karma reports a different error:
+
+```bash
+FAILED TESTS:
+  National Parks
+    app title
+      ✖ should be "National Parks"
+      Error: [$injector:unpr] Unknown provider: appTitleProvider <- appTitle
+```
+
+So although the test still fails, we have made a little progress. Our module's `$injector` was built and instantiated, but could not find the necessary provider for `appTitle`. Let's rectify that now by adding a `constant` to `nationalParks`. I will put `appTitle.js` in `src/components/`.
+
+```javascript
+// national-parks/src/components/appTitle.js
+
+;(function () {
+  'use strict';
+
+  angular
+    .module('nationalParks')
+    // 'constant' is a $provide method exposed on angular.module
+    .constant('appTitle', 'National Parks');
+
+}());
+```
+
+Now our test passes!
+
+```bash
+Start:
+  National Parks
+    app title
+      ✔ should be "National Parks"
+
+Finished in 0.017 secs / 0.012 secs
+
+SUMMARY:
+✔ 1 tests completed
+```
+
+---
+

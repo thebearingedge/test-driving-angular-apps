@@ -1,7 +1,10 @@
 {
   "globals": {
     "describe": true,
+    "beforeEach": true,
     "it": true,
-    "expect": true
+    "expect": true,
+    "module": true,
+    "inject": true
   }
 }
