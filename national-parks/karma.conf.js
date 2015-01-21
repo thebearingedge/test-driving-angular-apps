@@ -34,16 +34,19 @@ module.exports = function(config) {
     ],
 
 
-    // preprocess matching files before serving them to the browser
-    // available preprocessors: https://npmjs.org/browse/keyword/karma-preprocessor
     preprocessors: {
+      // add our source directory to preprocessors
+      'src/**/*.js': ['coverage']
     },
 
+    // add 'coverage' to our reporters
+    reporters: ['mocha', 'coverage'],
 
-    // test results reporter to use
-    // possible values: 'dots', 'progress'
-    // available reporters: https://npmjs.org/browse/keyword/karma-reporter
-    reporters: ['mocha'],
+    // configure the coverage reporter to output to 'coverage/'
+    coverageReporter: {
+      type : 'html',
+      dir : 'coverage/'
+    },
 
 
     // web server port

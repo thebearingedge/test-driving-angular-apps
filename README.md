@@ -214,7 +214,7 @@ The Angular Mocks library ships with a handful of functions that we'll be using 
 
 ##### `module`
 
-The first is [`module`](https://docs.angularjs.org/api/ngMock/function/angular.mock.module). As the docs state, `module` builds our app's (or module's) `$injector` service, registering the module's components for injection. All of our angular-specific tests will rely on referencing the `nationalParks` module, so we can use `module` to build the `$injector` "before each" test. `beforeEach` is a Mocha function that will execute in advance of each following test, allowing us to centralize setup and avoid repetition.
+As the docs state, [`module`](https://docs.angularjs.org/api/ngMock/function/angular.mock.module) builds our app's (or module's) `$injector` service, preparing the module's components for injection. All of our angular-specific tests will rely on referencing the `nationalParks` module, so we can use `module` to build the `$injector` "before each" test. `beforeEach` is a Mocha function that will execute in advance of each following test, allowing us to centralize setup and avoid repetition.
 
 ```javascript
 // national-parks/test/appSpec.js
@@ -255,7 +255,7 @@ SUMMARY:
 
 ##### `inject`
 
-The next Angular Mocks function we'll use is [`inject`](https://docs.angularjs.org/api/ngMock/function/angular.mock.inject). `inject` will actually instantiate the `$injector` service created when we called `module` and is used to inject references to registered components into our tests. These components include AngularJS services as well as components we've registered on the `nationalParks` module.
+The next Angular Mocks function we'll use is [`inject`](https://docs.angularjs.org/api/ngMock/function/angular.mock.inject). `inject` will actually instantiate the `$injector` service created when we called `module`. It is used to inject references to registered components into our tests. These components include AngularJS services as well as components we've registered on the `nationalParks` module.
 
 As described in `appSpec.js`, we want to test that the app is titled "National Parks". Once `appTitle` is injected into the test, we can make assertions against it.
 
@@ -284,7 +284,7 @@ describe('National Parks', function () {
 });
 ```
 
-Save the above changes, and we receive the following failure:
+Save the above changes, and we receive the following failure report:
 
 ```bash
 Start:
@@ -329,7 +329,7 @@ FAILED TESTS:
       Error: [$injector:unpr] Unknown provider: appTitleProvider <- appTitle
 ```
 
-So although the test still fails, we have made a little progress. Our module's `$injector` was built and instantiated, but could not find the necessary provider for `appTitle`. Let's rectify that now by adding a `constant` to `nationalParks`. I will put `appTitle.js` in `src/components/`.
+So although the test still fails, we have made a little progress. Our module's `$injector` was built and instantiated, but could not find the necessary `provider` for `appTitle`. Let's rectify that now by adding a `constant` to `nationalParks`. I will put `appTitle.js` in `src/components/`.
 
 ```javascript
 // national-parks/src/components/appTitle.js
@@ -360,4 +360,391 @@ SUMMARY:
 ```
 
 ---
+
+### Code Coverage
+
+Writing our tests first will go a long way to ensure that A) production code isn't delivered without corresponding tests and B) we have as much coverage as needed to verify that our code works. But we've only written one tiny piece of our app. A complex application will likely have more functionality than any one developer can keep track of. Fortunately, we can enable `karma-coverage` to monitor how thorough our test suite really is.
+
+##### Karma Coverage
+
+To enable test coverage reporting, updates must be made to `karma.conf.js`.
+
+```javascript
+// project-directory/karma.conf.js
+
+module.exports = function(config) {
+  config.set({
+
+    basePath: '',
+
+    frameworks: [
+      'mocha',
+      'chai',
+      'chai-as-promised',
+      'sinon',
+      'sinon-chai'
+    ],
+
+    files: [
+      'bower_components/angularjs/angular.js',
+      'bower_components/angularjs/angular-mocks.js',
+      'app/scripts/**/*.js',
+      'app/test/**/*Spec.js'
+    ],
+
+    exclude: [
+    ],
+
+    preprocessors: {
+      // add our source directory to preprocessors
+      'src/**/*.js': ['coverage']
+    },
+
+    // add 'coverage' to our reporters
+    reporters: ['mocha', 'coverage'],
+
+    // configure the coverage reporter to output to 'coverage/'
+    coverageReporter: {
+      type : 'html',
+      dir : 'coverage/'
+    },
+
+    port: 9876,
+
+    colors: true,
+
+    logLevel: config.LOG_INFO,
+
+    autoWatch: true,
+
+    browsers: ['Chrome'],
+
+    singleRun: false
+  });
+};
+```
+
+For these changes to take effect, Karma needs to be stopped and started again.
+
+After Karma has started and run our tests again, you should find that `national-parks/coverage/Chrome/` has been created. We can open the `index.html` in a browser to review coverage reports for all of our code thus far. For now, we are at 100% coverage and we'll try to keep it that way!
+
+---
+
+### An Async Data Service
+
+At the heart of any CRUD app is the data itself. To keep our concerns separated, we'll create an AngularJS `factory` as the source and destination of our app's data. "National Parks" will retrieve and persist its data to a web service via XHR requests. Let's begin by writing a spec for a `parkFactory`, describing its interface and behavior for creating a new park. The `parkFactory.create` method should send a `POST` request to a web service.
+
+```javascript
+// national-parks/test/parkFactorySpec.js
+
+describe('parkFactory', function () {
+
+  describe('#create', function () {
+
+    it('should POST a new park');
+
+  });
+
+});
+```
+
+##### Resolving References
+
+We'll need to exercise `parkFactory` in each of our tests, but we don't want to have to type out `inject` for every test like we did for `appTitle`. We can do that work in a `beforeEach` block. To get at `parkFactory` from within our tests, we'll use a convenient little hack courtesy of the AngularJS team. It's not hard to use, but they talk about it slightly more in depth in the [docs](https://docs.angularjs.org/api/ngMock/function/angular.mock.inject).
+
+1. Declare a variable outside the scope of `beforeEach`
+2. Inject the component, wrapped in \_underscores\_
+3. Initialize the aforementioned outer variable to the value of the injected component
+4. Profit
+
+```javascript
+// national-parks/test/parkFactorySpec.js
+
+describe('parkFactory', function () {
+
+  // declare a variable outside the scope of 'beforeEach'
+  var parkFactory;
+
+  beforeEach(function () {
+
+    module('nationalParks');
+
+    // inject the component, wrapped in _underscores_
+    inject(function (_parkFactory_) {
+      // initialize the outer variable to the value of the injected component
+      parkFactory = _parkFactory_;
+    });
+
+  });
+
+  describe('#create', function () {
+
+    // exercise parkFactory
+    it('should POST a new park');
+
+  });
+
+});
+```
+
+##### Mocking A Web Service API: `$httpBackend`
+
+Part of keeping our tests manageable includes isolating our System Under Test as much as possible. Our current System Under Test is `parkFactory`. To keep it isolated, we want to avoid any real XHR requests from being sent from the browser. There are a few reasons for this, here are some of them:
+
+- I/O, network or otherwise, is *way* slower than in-memory code execution
+- Anomalies in network integrity could make our tests unreliable
+- Is the server API even written yet?
+
+Enter `$httpBackend`. Or rather, the mock `$httpBackend`. The real `$httpBackend` service is actually the part of the AngularJS framework that sits between `$http` or `$resource` and the browser's `XMLHttpRequest` object. As a result, a mock `$httpBackend` can be swapped in to both anticipate request attempts and provide predefined responses.
+
+So let's inject it along with `parkFactory` and set up an expectation:
+
+```javascript
+// national-parks/test/parkFactorySpec.js
+
+describe('parkFactory', function () {
+
+  var parkFactory, $httpBackend;
+
+  beforeEach(function () {
+
+    module('nationalParks');
+
+    inject(function (_parkFactory_, _$httpBackend_) {
+      parkFactory = _parkFactory_;
+      $httpBackend = _$httpBackend_;
+    });
+
+  });
+
+  describe('#create', function () {
+
+    it('should POST a new park', function () {
+
+      var newPark = { name: 'Arches', state: 'Utah' };
+      var savedPark = { id: 4, name: 'Arches', state: 'Utah' };
+
+      $httpBackend.expectPOST('/api/parks', parkDetails)
+        .respond(200, savedPark);
+
+      // do something to satisfy the expectation
+      
+    });
+
+  });
+
+});
+```
+
+Here we are specifying that `$httpBackend` should receive a `POST` request containing a `POST` body "equal" to `newPark`. It will then "respond" with a payload of `savedPark`. Of course our test is already crashing and burning, but **NOT** because `$httpBackend` failed us.
+
+```bash
+FAILED TESTS:
+  parkFactory
+    ✖ "before each" hook
+    Error: [$injector:unpr] Unknown provider: parkFactoryProvider <- parkFactory
+```
+
+So here is a skeleton `parkFactory`:
+
+```javascript
+;(function () {
+  'use strict';
+
+  angular
+    .module('nationalParks')
+    .factory('parkFactory', parkFactory);
+
+  parkFactory.$inject = ['$q', '$http'];
+
+  function parkFactory($q, $http) {
+
+    var factory = {
+
+    };
+
+    return factory;
+
+  }
+
+}());
+```
+
+And our test passes? Wut?
+
+```bash
+  parkFactory
+    #create
+      ✔ should POST a new park
+
+Finished in 0.029 secs / 0.014 secs
+
+SUMMARY:
+✔ 2 tests completed
+```
+
+If you are familiar with Mocha, you may already know that a test that does not result in a thrown exception will *pass*. Throwing is what an assertion library such as Chai will do for us, in addition to offering a description of why. `$httpBackend` can throw for us too, but we need to explicitly ask it to.
+
+```javascript
+it('should POST a new park', function () {
+
+  var newPark = { name: 'Arches', state: 'Utah' };
+  var savedPark = { id: 4, name: 'Arches', state: 'Utah' };
+
+  $httpBackend.expectPOST('/api/parks', newPark)
+    .respond(200, savedPark);
+
+  // do something to satisfy the expectPOST
+
+  // throw if no POST received!
+  $httpBackend.verifyNoOutstandingExpectation();
+
+});
+```
+
+That's more like it.
+
+```bash
+FAILED TESTS:
+  parkFactory
+    #create
+      ✖ should POST a new park
+      Error: Unsatisfied requests: POST /api/parks
+```
+
+Let's finish out the test.
+
+```javascript
+it('should POST a new park', function () {
+
+  var newPark = { name: 'Arches', state: 'Utah' };
+  var savedPark = { id: 4, name: 'Arches', state: 'Utah' };
+
+  $httpBackend.expectPOST('/api/parks', newPark)
+    .respond(200, savedPark);
+
+  // send POST to $httpBackend and wait to capture response
+  var createdPark = parkFactory.create(newPark);
+
+  // trigger "response" from $httpBackend
+  $httpBackend.flush();
+
+  // check the results
+  expect(createdPark).to.eventually.deep.equal(savedPark);
+
+  $httpBackend.verifyNoOutstandingExpectation();
+
+});
+```
+
+To summarize, we want to `POST` a payload to our mock web service, and be ready to catch the response in a `createdPark` variable. Then manually return the response with `$httpBackend.flush`. Finally, we verify that the expected value is returned by `parkFactory.create`. A couple of things to note: Our parkFactory will return a promise courtesy of `$q`, so the `eventually` chainable method of Chai-As-Promised is used to resolve the promise. Also Chai's `deep` equal is used to check equality between objects and arrays, as they cannot be directly compared with normal `==` or `===` equality.
+
+```bash
+FAILED TESTS:
+  parkFactory
+    #create
+      ✖ should POST a new park
+      TypeError: undefined is not a function
+```
+
+Great, let's implement `parkFactory.create`!
+
+```javascript
+;(function () {
+  'use strict';
+
+  angular
+    .module('nationalParks')
+    .factory('parkFactory', parkFactory);
+
+  parkFactory.$inject = ['$q', '$http'];
+
+  function parkFactory($q, $http) {
+
+    var factory = {
+      create: create
+    };
+
+    return factory;
+
+    function create(newPark) {
+      var url = '/api/parks';
+      return $q(function (resolve) {
+        return $http.post(url, newPark)
+          .success(function (savedPark) {
+            resolve(savedPark);
+          });
+      });
+    }
+
+  }
+
+}());
+```
+
+Boom!
+
+```bash
+Start:
+  National Parks
+    app title
+      ✔ should be "National Parks"
+  parkFactory
+    #create
+      ✔ should POST a new park
+
+Finished in 0.036 secs / 0.021 secs
+
+SUMMARY:
+✔ 2 tests completed
+```
+
+##### Refactor the Test Suite
+
+We'd like to avoid having to repeat things like calling `$httpBackend.verifyNoOutstandingExpectation` (GUH!) at the end of every test, so we can wrap that in an `afterEach` block. We'll also include `$httpBackend.verifyNoOutstandingRequest` to ensure that we didn't forget to call `$httpBackend.flush` during any tests. It would be nice to just recycle some canned data during tests, so we'll declare and initialize that at the top of the suite.
+
+```javascript
+var parkFactory, $httpBackend, newPark, savedPark, parkUpdates, updatedPark, parkList;
+
+beforeEach(function () {
+  // initialize our data variables
+  newPark = { name: 'Arches', state: 'Utah' };
+  savedPark = { id: 4, name: 'Arches', state: 'Utah' };
+  parkList = [
+    { id: 1, name: 'Glacier' },
+    { id: 2, name: 'Crater Lake' }
+  ];
+  parkUpdates = { id: 3, description: 'Sweet.' };
+  updatedPark = { id: 3, name: 'Joshua Tree', description: 'Sweet.' };
+
+  module('nationalParks');
+
+  inject(function (_parkFactory_, _$httpBackend_) {
+    parkFactory = _parkFactory_;
+    $httpBackend = _$httpBackend_;
+  });
+
+});
+
+afterEach(function () {
+  // throw errors if $httpBackend is disappointed
+  $httpBackend.verifyNoOutstandingExpectation();
+  $httpBackend.verifyNoOutstandingRequest();
+});
+```
+
+##### Code Branches and Spies
+
+
+
+### TODO
+
+- Routes
+- Controllers
+- Filters
+- Directives
+- Gotchas
+- Misc. Tips
+- Attribution
+- Reading
 
