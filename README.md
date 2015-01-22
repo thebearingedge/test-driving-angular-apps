@@ -1040,11 +1040,126 @@ $routeProvider
   .otherwise('/');
 ```
 
-We will come back to routing after a brief detour into controllers.
+We will come back to routing after a detour into controllers.
+
+---
+
+### Controllers
+
+Controllers are where the action happens. They publish data and user interaction controls on the view. In this sense, they are what makes an app.. appy. Like any other AngularJS component, a controller is an object. It differs in that it is endowed with a local `$scope` and is "newed up" rather than being a singleton like factories.
+
+The AngularJS `$controller` service is responsible for instantiating controllers at runtime, but we can use it manually too.
+
+"National Parks" will have an `AppController` to wrap around the entire app. Let's look at instantiating it and testing for a welcome message.
+
+```javascript
+// national-parks/test/AppControllerSpec.js
+
+describe('AppController', function () {
+
+  var appController;
+
+  beforeEach(function () {
+
+    module('nationalParks');
+
+    // use $controller to instantiate AppController by name
+    inject(function ($controller) {
+      appController = $controller('AppController');
+    });
+
+  });
+
+  it('should contain a welcome message', function () {
+    // check properties directly on the controller instance
+    expect(appController.message).to.equal('Welcome to ');
+  });
+
+});
+```
+
+And here is `AppController`:
+
+```javascript
+// national-parks/src/components/AppController.js
+
+;(function () {
+  'use strict';
+
+  angular
+    .module('nationalParks')
+    .controller('AppController', AppController);
+
+  AppController.$inject = [];
+
+  function AppController() {
+
+    var vm = this;
+
+    vm.message = 'Welcome to ';
+
+  }
+
+}());
+```
+
+##### Initializing
+
+A while back we created a `constant` on our module, `appTitle`. Let's create an application-wide greeting within `AppController`. I'm not showing it here, but be sure to inject `appTitle` during the `beforeEach` block.
+
+```javascript
+it('should build a greeting from appTitle and #message', function () {
+
+  var message = appController.message;
+  var title = appTitle;
+
+  expect(appController.greeting).to.equal(message + title);
+
+});
+```
+
+```bash
+FAILED TESTS:
+  AppController
+    ✖ should build a greeting from appTitle and message
+    AssertionError: expected undefined to equal 'Welcome to National Parks'
+```
+
+We want this greeting to be built immediately after instantiation, so we'll write an `initialize` function to take care of it for us.
+
+```javascript
+AppController.$inject = ['appTitle'];
+
+function AppController(appTitle) {
+
+  var vm = this;
+
+  vm.message = 'Welcome to ';
+  vm.greeting = undefined;
+
+  initialize();
+
+  function initialize() {
+    vm.greeting = vm.message + appTitle;
+  }
+
+}
+```
+
+```bash
+  AppController
+    ✔ should contain a welcome message
+    ✔ should build a greeting from appTitle and message
+```
+
+This was pretty easy, but `appTitle` also, admittedly contrived. Things get more interesting when controllers depend on more complex objects.
+
+##### Mocking An Async Data Service
+
+It is strongly recommended that controllers are kept *lean* or *dumb*. This is good advice because while controllers are not inherently difficult to test, a lot of upfront work must be done to keep them isolated.
 
 ### TODO
 
-- Controllers
 - Filters
 - Directives
 - Gotchas
