@@ -1291,7 +1291,7 @@ FAILED TESTS:
       AssertionError: expected path to have been called with arguments /parks/8/details
 ```
 
-We'll call this controller finished for now.
+We'll call this controller finished for the moment.
 
 ```javascript
 // national-parks/src/components/ParkFormController.js
@@ -1322,6 +1322,214 @@ We'll call this controller finished for now.
   }
 
 }());
+```
+
+---
+
+### Routes, Controllers and Resolve
+
+When we last left `router.js`, it was pretty meager. It could only load templates:
+
+```javascript
+// national-parks/src/components/router.js
+
+;(function () {
+  'use strict';
+
+  angular
+    .module('nationalParks')
+    .config(router);
+
+  router.$inject = ['$routeProvider'];
+
+  function router($routeProvider) {
+
+    $routeProvider
+
+      .when('/', {
+        templateUrl: '/templates/home-view.html'
+      })
+      .when('/parks', {
+        templateUrl: '/templates/list-view.html'
+      })
+      .when('/new-park', {
+        templateUrl: 'templates/edit-view.html'
+      })
+      .when('/parks/:id/details', {
+        templateUrl: '/templates/details-view.html'
+      })
+      .when('/parks/:id/edit', {
+        templateUrl: '/templates/edit-view.html'
+      })
+      .otherwise('/');
+
+  }
+
+}());
+```
+
+We are going to concentrate on the `/parks/:id/edit` route. We want to resolve park information for the `ParkFormController` before instantiating it on the edit view. Some heavy refactoring of `routerSpec.js` is in order.
+
+```javascript
+// national-parks/test/routerSpec.js
+
+'use strict';
+
+describe('router', function () {
+
+  var $location, $route, $rootScope, $httpBackend, mockParkFactory, parkFactory, parkDetails;
+
+  beforeEach(function () {
+
+    parkDetails = { id: 1, name: 'Arches' };
+
+    mockParkFactory = {};
+
+    module('nationalParks', function ($provide) {
+      $provide.value('parkFactory', mockParkFactory);
+    });
+
+    inject(function ($q) {
+      mockParkFactory.findById = sinon.spy(function (id) {
+        return $q(function (resolve) {
+          resolve(parkDetails);
+        });
+      });
+    });
+
+  });
+
+  beforeEach(function () {
+
+    inject(function (_$location_, _$route_, _$rootScope_, _$httpBackend_, _parkFactory_) {
+      $location = _$location_;
+      $route = _$route_;
+      $rootScope = _$rootScope_;
+      $httpBackend = _$httpBackend_;
+      parkFactory = _parkFactory_;
+    });
+
+  });
+
+  afterEach(function () {
+    $httpBackend.verifyNoOutstandingExpectation();
+  });
+
+  describe('/parks/:id/edit', function () {
+
+    var route = '/parks/1/edit';
+
+    beforeEach(function () {
+      $httpBackend.expectGET('/templates/edit-view.html')
+        .respond(200);
+    });
+
+    it('should load the edit view template', function () {
+
+      $location.path(route);
+
+    });
+
+    it('should instantiate ParkFormController');
+
+    it('should resolve parkDetails');
+
+    it('should pass parkDetails to ParkFormController');
+
+  });
+
+});
+```
+
+There is nothing terribly new here yet. We are mocking `parkFactory` the same way we did in an earlier controller example. The main difference is the structure of the suite. Each route will get its own `describe` block and `$httpBackend.expectGET`. The first test specified should already pass.
+
+Verifying that `ParkFormController` is instantiated is fairly straight forward:
+
+```javascript
+it('should instantiate ParkFormController', function () {
+
+  $location.path(route);
+
+  // run a digest cycle to start the route change
+  $rootScope.$digest();
+
+  expect($route.current.controller).to.equal('ParkFormController');
+
+});
+```
+
+Just add `ParkFormController` to the route object to pass this test.
+
+```javascript
+.when('/parks/:id/edit', {
+  templateUrl: '/templates/edit-view.html',
+  controller: 'ParkFormController'
+})
+```
+
+Let's look at resolving `parkDetails` so our controller has some data to put on the view when it is instantiated. Our route definition will delegate to `parkFactory.findById` to fetch that data.
+
+```javascript
+it('should resolve parkDetails', function () {
+
+  $location.path(route);
+
+  // run a digest cycle to start the route change
+  $rootScope.$digest();
+
+  expect(parkFactory.findById).to.have.been.calledWith(1);
+
+});
+```
+
+So we need to implement the necessary resolve function on the route.
+
+```javascript
+  router.$inject = ['$routeProvider'];
+
+  function router($routeProvider) {
+
+    $routeProvider
+
+      .when('/', {
+        templateUrl: '/templates/home-view.html'
+      })
+      .when('/parks', {
+        templateUrl: '/templates/list-view.html'
+      })
+      .when('/new-park', {
+        templateUrl: 'templates/edit-view.html'
+      })
+      .when('/parks/:id/details', {
+        templateUrl: '/templates/details-view.html'
+      })
+      .when('/parks/:id/edit', {
+        templateUrl: '/templates/edit-view.html',
+        resolve: {
+          parkDetails: resolveParkDetails
+        }
+      })
+      .otherwise('/');
+
+    resolveParkDetails.$inject = ['parkFactory', '$route'];
+
+    function resolveParkDetails(parkFactory, $route) {
+      var id = parseInt($route.current.params.id, 10);
+      return parkFactory.findById(id);
+    }
+
+  }
+```
+
+Just to review: `resolveParkDetails` will depend on `parkFactory` and `$route`. We can get the `:id` parameter from the current route and pass it to `parkFactory.findById`.
+
+```bash
+  router
+    /parks/:id/edit
+      ✔ should load the edit view template
+      ✔ should instantiate ParkFormController
+      ✔ should resolve parkDetails
+      ✖ should pass parkDetails to ParkFormController (skipped)
 ```
 
 ### TODO
