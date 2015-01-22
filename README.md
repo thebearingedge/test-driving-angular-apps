@@ -1477,7 +1477,8 @@ it('should resolve parkDetails', function () {
   // run a digest cycle to start the route change
   $rootScope.$digest();
 
-  expect(parkFactory.findById).to.have.been.calledWith(1);
+  // NOTE: route parameters like :id are strings!
+  expect(parkFactory.findById).to.have.been.calledWith('1');
 
 });
 ```
@@ -1514,7 +1515,7 @@ So we need to implement the necessary resolve function on the route.
     resolveParkDetails.$inject = ['parkFactory', '$route'];
 
     function resolveParkDetails(parkFactory, $route) {
-      var id = parseInt($route.current.params.id, 10);
+      var id = $route.current.params.id;
       return parkFactory.findById(id);
     }
 

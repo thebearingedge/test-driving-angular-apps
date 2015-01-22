@@ -71,7 +71,7 @@ describe('router', function () {
 
       $rootScope.$digest();
 
-      expect(parkFactory.findById).to.have.been.calledWith(1);
+      expect(parkFactory.findById).to.have.been.calledWith('1');
 
     });
 

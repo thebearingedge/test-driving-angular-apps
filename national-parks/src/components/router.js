@@ -37,7 +37,7 @@
 
     function resolveParkDetails(parkFactory, $route) {
 
-      var id = parseInt($route.current.params.id, 10);
+      var id = $route.current.params.id;
       return parkFactory.findById(id);
 
     }
