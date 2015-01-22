@@ -792,9 +792,258 @@ function save(parkDetails) {
 }
 ```
 
+---
+
+### Application State via Routes
+
+If data is the heart of our app, then its router is the bones. If we care about controlling the app's state, it can only contort to the extent that we build in points of articulation. We'll use `ngRoute` to build a few different states. These states will dictate which view templates and functionality are loaded into the app.
+
+We'll be injecting a couple of new services into `routerSpec.js`.
+
+```javascript
+// national-parks/test/routerSpec.js
+
+describe('router', function () {
+
+  var $location, $route, $rootScope;
+
+  beforeEach(function () {
+
+    module('nationalParks');
+
+    inject(function (_$location_, _$route_, _$rootScope_) {
+      $location = _$location_;
+      $route = _$route_;
+      $rootScope = _$rootScope_;
+    });
+
+  });
+
+});
+```
+
+##### Path Management
+
+With `$location`, we'll be able to steer the application's state by manually updating the browser's URL. `$route` allows us to examine attributes of the application's state. To check the results of route changes, we can manually trigger the app's digest cycle by using `$rootScope.$digest`.
+
+Our first desired behavior is that "National Parks" defaults to a home screen. If the brower's URL doesn't match any defined routes, go home.
+
+```javascript
+it('should default to "/"', function () {
+
+  // set URL path to jibberish
+  $location.path('asdf-jibberish-asdf');
+
+  // kick off the digest cycle
+  $rootScope.$digest();
+
+  // check the URL path
+  expect($location.path()).to.equal('/');
+
+});
+```
+
+Fail, didn't install `ngRoute`!
+
+```bash
+FAILED TESTS:
+  router
+    ✖ "before each" hook
+      Chrome 40.0.2214 (Mac OS X 10.9.5)
+    Error: [$injector:unpr] Unknown provider: $routeProvider <- $route
+```
+
+To fix this:
+
+- Install `angular-route` via Bower
+- Include `angular-route` in `karma.conf.js`
+- Add `ngRoute` as a dependency of our module. When `module` executes in our `beforeEach` block, `ngRoute`'s components will be registered with the `$injector`.
+
+```bash
+~/national-parks $ bower install -S angular-route
+```
+
+```javascript
+// national-parks/karma.conf.js
+    files: [
+      'bower_components/angular/angular.js',
+      'bower_components/angular-route/angular-route.js',
+      'bower_components/angular-mocks/angular-mocks.js',
+      'src/**/*.js',
+      'test/**/*Spec.js'
+    ],
+```
+
+```javascript
+// national-parks/src/app.js
+;(function () {
+  'use strict';
+
+  angular.module('nationalParks', [
+    'ngRoute'
+  ]);
+
+}());
+```
+
+Karma will need to be restarted to reload the config.
+
+```bash
+FAILED TESTS:
+  router
+    ✖ should default to "/"
+      Chrome 40.0.2214 (Mac OS X 10.9.5)
+    AssertionError: expected '/asdf-jibberish-asdf' to equal '/'
+```
+
+We are back on track. Let's create `router.js`.
+
+```javascript
+// national-parks/src/components/router.js
+
+;(function () {
+  'use strict';
+
+  angular
+    .module('nationalParks')
+    .config(router);
+
+  router.$inject = ['$routeProvider'];
+
+  function router($routeProvider) {
+
+    $routeProvider
+
+      .otherwise('/');
+
+  }
+
+}());
+```
+
+In this component we are calling `config` on `nationalParks` to configure `$routeProvider`. These configurations will be loaded when our module is bootstrapped.
+
+```bash
+router
+    ✔ should default to "/"
+
+Finished in 0.086 secs / 0.034 secs
+```
+
+##### Template `GET`s
+
+When the default path is loaded, we'd like a `home-view.html` template to be rendered. It is possible to cache templates in advance, but we will not be covering that. For this guide, all templates will be loaded via XHR and that means we'll need to use `$httpBackend` to catch requests. Be sure to `inject` it at the top of the test suite. Here's the revised test:
+
+```javascript
+it('should default to "/" and load the home-view template', function () {
+
+  // mock the asset resource
+  $httpBackend.expectGET('/templates/home-view.html')
+    .respond(200);
+
+  $location.path('/asdf-jibberish-asdf');
+
+  $rootScope.$digest();
+
+  expect($location.path()).to.equal('/');
+
+  // throw if template was not requested
+  $httpBackend.verifyNoOutstandingExpectation();
+
+});
+```
+
+```bash
+FAILED TESTS:
+  router
+    ✖ should default to "/" and load the home-view template
+    Error: Unsatisfied requests: GET /templates/home-view.html
+```
+
+`ngRoute` allows us to declare that a template be fetched and rendered on the view for a given route.
+
+```javascript
+// national-parks/src/components/router.js
+
+;(function () {
+  'use strict';
+
+  angular
+    .module('nationalParks')
+    .config(router);
+
+  router.$inject = ['$routeProvider'];
+
+  function router($routeProvider) {
+
+    $routeProvider
+    
+      .when('/', {
+        templateUrl: '/templates/home-view.html'
+      })
+
+      .otherwise('/');
+
+  }
+
+}());
+```
+
+A similar test can be written for each of our app's views:
+
+1. Home 
+2. List 
+3. Details 
+4. Creation 
+5. Revision 
+
+We should move `$httpBackend.verifyNoOutstandingExpectation` into an `afterEach` block while we're at it.
+
+```javascript
+describe('/parks', function () {
+
+    it('should load the list view template', function () {
+
+      $httpBackend.expectGET('/templates/list-view.html')
+        .respond(200);
+
+      $location.path('/parks');
+
+    });
+
+  });
+```
+
+Note that because we have not defined the `/parks` route, `$routeProvider` defaulted the `/` path and triggered a request for `home-view.html`.
+
+```bash
+FAILED TESTS:
+  router
+    ✖ "after each" hook
+    Error: Unexpected request: GET /templates/home-view.html
+    Expected GET /templates/list-view.html
+```
+
+Add another `when` to `$routeProvider` in `router.js` to pass:
+
+```javascript
+$routeProvider
+
+  .when('/', {
+    templateUrl: '/templates/home-view.html'
+  })
+
+  .when('/parks', {
+    templateUrl: '/templates/list-view.html'
+  })
+
+  .otherwise('/');
+```
+
+We will come back to routing after a brief detour into controllers.
+
 ### TODO
 
-- Routes
 - Controllers
 - Filters
 - Directives

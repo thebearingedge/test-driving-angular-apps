@@ -1,6 +1,8 @@
 ;(function () {
   'use strict';
 
-  angular.module('nationalParks', []);
+  angular.module('nationalParks', [
+    'ngRoute'
+  ]);
 
 }());
