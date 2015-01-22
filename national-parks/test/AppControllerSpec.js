@@ -22,7 +22,7 @@ describe('AppController', function () {
 
   });
 
-  it('should build a greeting from appTitle and message', function () {
+  it('should contain a greeting made from appTitle and message', function () {
 
     var message = appController.message;
     var title = appTitle;

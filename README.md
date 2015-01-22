@@ -1108,7 +1108,7 @@ And here is `AppController`:
 A while back we created a `constant` on our module, `appTitle`. Let's create an application-wide greeting within `AppController`. I'm not showing it here, but be sure to inject `appTitle` during the `beforeEach` block.
 
 ```javascript
-it('should build a greeting from appTitle and #message', function () {
+it('should contain a greeting made from appTitle and #message', function () {
 
   var message = appController.message;
   var title = appTitle;
@@ -1121,7 +1121,7 @@ it('should build a greeting from appTitle and #message', function () {
 ```bash
 FAILED TESTS:
   AppController
-    ✖ should build a greeting from appTitle and message
+    ✖ should contain a greeting made from appTitle and message
     AssertionError: expected undefined to equal 'Welcome to National Parks'
 ```
 
@@ -1149,14 +1149,180 @@ function AppController(appTitle) {
 ```bash
   AppController
     ✔ should contain a welcome message
-    ✔ should build a greeting from appTitle and message
+    ✔ should contain a greeting made from appTitle and message
 ```
 
-This was pretty easy, but `appTitle` also, admittedly contrived. Things get more interesting when controllers depend on more complex objects.
+This was pretty easy, but also, admittedly contrived. Things get more interesting when controllers depend on more complex objects.
 
 ##### Mocking An Async Data Service
 
-It is strongly recommended that controllers are kept *lean* or *dumb*. This is good advice because while controllers are not inherently difficult to test, a lot of upfront work must be done to keep them isolated.
+Let's create `ParkFormController`. This controller will be responsible for accepting user input from the view as well as providing some controls. It will delegate persisting user input to `parkFactory`. Because we already know that `parkFactory` works, we don't want to set up `$httpBackend` again. All we really want to confirm is that `ParkFormController` knows how to interact with `parkFactory`. So how to we do this?
+
+This is where `$provide` comes in. We've already used a couple of methods on `$provide` while registering our `appTitle` and `parkFactory`. During unit tests, we use `$provide` directly to overwrite components that we want to replace. The replacement objects are "mocks". The most important
+
+```javascript
+// national-parks/test/ParkFormControllerSpec.js
+
+describe('ParkFormController', function () {
+  'use strict';
+
+  var formController, mockParkFactory, parkFactory, parkDetails;
+
+  beforeEach(function () {
+
+    parkDetails = { name: 'Mount Rainier', description: 'Woah' };
+
+    // initialize mock to an empty object
+    mockParkFactory = {};
+
+    module('nationalParks', function ($provide) {
+      // overwrite the original parkFactory object as the $injector is built
+      $provide.value('parkFactory', mockParkFactory);
+    });
+
+    inject(function ($q) {
+      // define #save on the mock
+      mockParkFactory.save = sinon.spy(function (details) {
+        return $q(function (resolve) {
+          details.id = 8;
+          resolve(details);
+        });
+      });
+    });
+
+  });
+
+  beforeEach(function () {
+
+    inject(function ($controller, _parkFactory_) {
+      formController = $controller('ParkFormController');
+      parkFactory = _parkFactory_;
+    });
+
+  });
+
+});
+
+```
+
+To recap, when we call `module`, we are passing in a function that is executed when the module's `$injector` is built. Next we are pulling `$q` from the module to build a promise-based `save` method on `mockParkFactory`. This save method is a `sinon.spy`-wrapped function that will behave just like the real `parkFactory.save`, as well as record how it was called.
+
+It is strongly recommended that controllers are kept *lean* or *dumb*. As you can see, this is good advice! While controllers are not inherently difficult to test, a *lot* of upfront work must go into keeping them isolated from their dependencies.
+
+```javascript
+describe('#savePark', function () {
+
+  it('should delegate saving to parkFactory#save', function () {
+
+    formController.savePark(parkDetails);
+
+    expect(parkFactory.save).to.have.been.calledWith(parkDetails);
+
+  });
+
+});
+```
+
+```javascript
+// national-parks/src/components/ParkFormController.js
+
+;(function () {
+  'use strict';
+
+  angular
+    .module('nationalParks')
+    .controller('ParkFormController', ParkFormController);
+
+  ParkFormController.$inject = ['parkFactory'];
+
+  function ParkFormController(parkFactory) {
+
+    var vm = this;
+
+    vm.savePark = savePark;
+
+    function savePark(parkDetails) {
+      return parkFactory.save(parkDetails);
+    }
+
+  }
+
+}());
+```
+
+After a park is saved, we want to transition the user to its details view. We are going to need to `inject` a couple more services into the tests: `$location` and `$rootScope`. Be sure to declare variables for them at the top of the suite. We'll also `spy` on `$location.path`.
+
+```javascript
+beforeEach(function () {
+
+  inject(function ($controller, _parkFactory_, _$location_, _$rootScope_) {
+    formController = $controller('ParkFormController');
+    parkFactory = _parkFactory_;
+    $location = _$location_;
+    $rootScope = _$rootScope_;
+
+    sinon.spy($location, 'path');
+  });
+
+});
+```
+
+```javascript
+it('should redirect to the saved park\'s detail view', function () {
+
+  formController.savePark(parkDetails);
+
+  // run the digest cycle to resolve the promise returned by "parkFactory"
+  $rootScope.$digest();
+
+  expect($location.path).to.have.been.calledWith('/parks/8/details');
+
+});
+```
+
+Because `parkFactory.save` returns a promise, we need to run the digest cycle to resolve it.
+
+```bash
+FAILED TESTS:
+  ParkFormController
+    #savePark
+      ✖ should redirect to the saved park's detail view
+        Chrome 40.0.2214 (Mac OS X 10.9.5)
+      AssertionError: expected path to have been called with arguments /parks/8/details
+```
+
+We'll call this controller finished for now.
+
+```javascript
+// national-parks/src/components/ParkFormController.js
+
+;(function () {
+  'use strict';
+
+  angular
+    .module('nationalParks')
+    .controller('ParkFormController', ParkFormController);
+
+  ParkFormController.$inject = ['parkFactory', '$location'];
+
+  function ParkFormController(parkFactory, $location) {
+
+    var vm = this;
+
+    vm.savePark = savePark;
+
+    function savePark(parkDetails) {
+      return parkFactory.save(parkDetails)
+        .then(function (saved) {
+          var route = '/parks/' + saved.id + '/details';
+          return $location.path(route);
+        });
+    }
+
+  }
+
+}());
+```
 
 ### TODO
 
