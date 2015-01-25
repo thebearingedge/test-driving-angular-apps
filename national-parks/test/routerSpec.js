@@ -53,6 +53,23 @@ describe('router', function () {
     $httpBackend.verifyNoOutstandingExpectation();
   });
 
+  describe('default route', function () {
+
+    it('should default to "/"', function () {
+
+      $httpBackend.expectGET('/templates/home-view.html')
+        .respond(200);
+
+      $location.path('');
+
+      $rootScope.$digest();
+
+      expect($location.path()).to.equal('/');
+
+    });
+
+  });
+
   describe('/', function () {
 
     it('should load the home view template', function () {
