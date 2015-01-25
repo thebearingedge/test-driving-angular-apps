@@ -28,12 +28,24 @@ describe('ParkFormController', function () {
   beforeEach(function () {
 
     inject(function ($controller, _parkFactory_, _$location_, _$rootScope_) {
-      formController = $controller('ParkFormController');
+      formController = $controller('ParkFormController', {
+        parkDetails: parkDetails
+      });
       parkFactory = _parkFactory_;
       $location = _$location_;
       $rootScope = _$rootScope_;
 
       sinon.spy($location, 'path');
+    });
+
+  });
+
+  describe('Initial state', function () {
+
+    it('should publish park details on the view model', function () {
+
+      expect(formController.parkDetails).to.deep.equal(parkDetails);
+
     });
 
   });

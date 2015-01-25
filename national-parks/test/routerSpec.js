@@ -2,11 +2,16 @@
 
 describe('router', function () {
 
-  var $location, $route, $rootScope, $httpBackend, mockParkFactory, parkFactory, parkDetails;
+  var $location, $route, $rootScope, $httpBackend, mockParkFactory, parkFactory, parkDetails, parkList;
 
   beforeEach(function () {
 
     parkDetails = { id: 1, name: 'Arches' };
+
+    parkList = [
+      { id: 1, name: 'Arches' },
+      { id: 2, name: 'Crater Lake' }
+    ];
 
     mockParkFactory = {};
 
@@ -15,11 +20,19 @@ describe('router', function () {
     });
 
     inject(function ($q) {
-      mockParkFactory.findById = sinon.spy(function (id) {
+
+      mockParkFactory.getOne = sinon.spy(function (id) {
         return $q(function (resolve) {
           resolve(parkDetails);
         });
       });
+
+      mockParkFactory.getList = sinon.spy(function () {
+        return $q(function (resolve) {
+          resolve(parkList);
+        });
+      });
+
     });
 
   });
@@ -40,9 +53,22 @@ describe('router', function () {
     $httpBackend.verifyNoOutstandingExpectation();
   });
 
+  describe('/', function () {
+
+    it('should load the home view template', function () {
+
+      $httpBackend.expectGET('/templates/home-view.html')
+        .respond(200);
+
+      $location.path('/');
+
+    });
+
+  });
+
   describe('/parks/:id/edit', function () {
 
-    var route = '/parks/1/edit';
+    var url = '/parks/1/edit';
 
     beforeEach(function () {
       $httpBackend.expectGET('/templates/edit-view.html')
@@ -51,13 +77,13 @@ describe('router', function () {
 
     it('should load the edit view template', function () {
 
-      $location.path(route);
+      $location.path(url);
 
     });
 
     it('should instantiate ParkFormController', function () {
 
-      $location.path(route);
+      $location.path(url);
 
       $rootScope.$digest();
 
@@ -65,17 +91,136 @@ describe('router', function () {
 
     });
 
-    it('should resolve parkDetails', function () {
+    it('should resolve parkDetails', inject(function ($injector) {
 
-      $location.path(route);
+      $location.path(url);
 
       $rootScope.$digest();
 
-      expect(parkFactory.findById).to.have.been.calledWith('1');
+      expect(parkFactory.getOne).to.have.been.calledWith('1');
+
+      expect($injector.invoke($route.current.resolve.parkDetails))
+        .to.eventually.deep.equal(parkDetails);
+
+    }));
+
+  });
+
+  describe('/new-park', function () {
+
+    var url = '/new-park';
+
+    beforeEach(function () {
+      $httpBackend.expectGET('/templates/edit-view.html')
+        .respond(200);
+    });
+
+    it('should load the edit view template', function () {
+
+      $location.path(url);
 
     });
 
-    it('should pass parkDetails to ParkFormController');
+    it('should instantiate ParkFormController', function () {
+
+      $location.path(url);
+
+      $rootScope.$digest();
+
+      expect($route.current.controller).to.equal('ParkFormController');
+
+    });
+
+    it('should resolve empty parkDetails', function () {
+
+      $location.path(url);
+
+      $rootScope.$digest();
+
+      expect($route.current.resolve.parkDetails())
+        .to.deep.equal({});
+
+    });
+
+  });
+
+  describe('/parks/:id/details', function () {
+
+    var url = '/parks/1/details';
+
+    beforeEach(function () {
+      $httpBackend.expectGET('/templates/details-view.html')
+        .respond(200);
+    });
+
+    it('should load the details view template', function () {
+
+      $location.path(url);
+
+    });
+
+    it('should instantiate ParkDetailsController', function () {
+
+      $location.path(url);
+
+      $rootScope.$digest();
+
+      expect($route.current.controller).to.equal('ParkDetailsController');
+
+    });
+
+    it('should resolve parkDetails', inject(function ($injector) {
+
+      $location.path(url);
+
+      $rootScope.$digest();
+
+      expect(parkFactory.getOne).to.have.been.calledWith('1');
+
+      expect($injector.invoke($route.current.resolve.parkDetails))
+        .to.eventually.deep.equal(parkDetails);
+
+    }));
+
+  });
+
+  describe('/parks', function () {
+
+    var url = '/parks';
+
+    beforeEach(function () {
+      $httpBackend.expectGET('/templates/list-view.html')
+        .respond(200);
+    });
+
+    it('should load the list view template', function () {
+
+      $location.path(url);
+
+    });
+
+    it('should instantiate ParkListController', function () {
+
+      $location.path(url);
+
+      $rootScope.$digest();
+
+      expect($route.current.controller).to.equal('ParkListController');
+
+    });
+
+    it('should resolve parkList', inject(function ($injector) {
+
+      $location.path(url);
+
+      $rootScope.$digest();
+
+      expect(parkFactory.getList).to.have.been.called;
+
+      expect($injector.invoke($route.current.resolve.parkList))
+        .to.eventually.deep.equal(parkList);
+
+    }));
 
   });
 

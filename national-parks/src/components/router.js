@@ -15,13 +15,25 @@
         templateUrl: '/templates/home-view.html'
       })
       .when('/parks', {
-        templateUrl: '/templates/list-view.html'
+        templateUrl: '/templates/list-view.html',
+        controller: 'ParkListController',
+        resolve: {
+          parkList: resolveParkList
+        }
       })
       .when('/new-park', {
-        templateUrl: 'templates/edit-view.html'
+        templateUrl: '/templates/edit-view.html',
+        controller: 'ParkFormController',
+        resolve: {
+          parkDetails: function () { return {}; }
+        }
       })
       .when('/parks/:id/details', {
-        templateUrl: '/templates/details-view.html'
+        templateUrl: '/templates/details-view.html',
+        controller: 'ParkDetailsController',
+        resolve: {
+          parkDetails: resolveParkDetails
+        }
       })
       .when('/parks/:id/edit', {
         templateUrl: '/templates/edit-view.html',
@@ -38,7 +50,15 @@
     function resolveParkDetails(parkFactory, $route) {
 
       var id = $route.current.params.id;
-      return parkFactory.findById(id);
+      return parkFactory.getOne(id);
+
+    }
+
+    resolveParkList.$inject = ['parkFactory'];
+
+    function resolveParkList(parkFactory) {
+
+      return parkFactory.getList();
 
     }
 

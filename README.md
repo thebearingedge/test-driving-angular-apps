@@ -1390,7 +1390,7 @@ describe('router', function () {
     });
 
     inject(function ($q) {
-      mockParkFactory.findById = sinon.spy(function (id) {
+      mockParkFactory.getOne = sinon.spy(function (id) {
         return $q(function (resolve) {
           resolve(parkDetails);
         });
@@ -1434,8 +1434,6 @@ describe('router', function () {
 
     it('should resolve parkDetails');
 
-    it('should pass parkDetails to ParkFormController');
-
   });
 
 });
@@ -1467,10 +1465,10 @@ Just add `ParkFormController` to the route object to pass this test.
 })
 ```
 
-Let's look at resolving `parkDetails` so our controller has some data to put on the view when it is instantiated. Our route definition will delegate to `parkFactory.findById` to fetch that data.
+Let's look at resolving `parkDetails` so our controller has some data to put on the view when it is instantiated. Our route definition's resolve function will delegate to `parkFactory.getOne` to fetch that data. 
 
 ```javascript
-it('should resolve parkDetails', function () {
+it('should resolve parkDetails', inject(function ($injector) {
 
   $location.path(route);
 
@@ -1478,12 +1476,18 @@ it('should resolve parkDetails', function () {
   $rootScope.$digest();
 
   // NOTE: route parameters like :id are strings!
-  expect(parkFactory.findById).to.have.been.calledWith('1');
+  expect(parkFactory.getOne).to.have.been.calledWith('1');
 
-});
+  // inject resolve function's dependencies before invocation
+  expect($injector.invoke($route.current.resolve.parkDetails))
+    .to.eventually.deep.equal(parkDetails);
+
+}));
 ```
 
-So we need to implement the necessary resolve function on the route.
+We also verify the resolve function's return value using the `$injector` service. `$injector.invoke` will inject necessary dependencies into the resolve function before invoking it.
+
+Now we need to implement the necessary resolve function on the route.
 
 ```javascript
   router.$inject = ['$routeProvider'];
@@ -1516,13 +1520,13 @@ So we need to implement the necessary resolve function on the route.
 
     function resolveParkDetails(parkFactory, $route) {
       var id = $route.current.params.id;
-      return parkFactory.findById(id);
+      return parkFactory.getOne(id);
     }
 
   }
 ```
 
-Just to review: `resolveParkDetails` will depend on `parkFactory` and `$route`. We can get the `:id` parameter from the current route and pass it to `parkFactory.findById`.
+Just to review: `resolveParkDetails` will depend on `parkFactory` and `$route`. We can get the `:id` parameter from the current route and pass it to `parkFactory.getOne`.
 
 ```bash
   router
@@ -1530,7 +1534,105 @@ Just to review: `resolveParkDetails` will depend on `parkFactory` and `$route`. 
       ✔ should load the edit view template
       ✔ should instantiate ParkFormController
       ✔ should resolve parkDetails
-      ✖ should pass parkDetails to ParkFormController (skipped)
+```
+
+Since we will be resolving data for `ParkFormController`, we should make sure that this data is put to use on instantiation. We'll need to pop back in to `ParkFormControllerSpec.js` to write our test.
+
+```javascript
+describe('Initial state', function () {
+
+  it('should immediately publish park details to the view model', function () {
+
+    expect(formController.parkDetails).to.deep.equal(parkDetails);
+
+  });
+
+});
+```
+
+To make this work, we need to modify the instantiation of `ParkFormController` in our `beforeEach` block. `$controller` takes a second parameter that allows us to specify values of its dependencies. Here we are defining a "parkDetails" injection with the value of the `parkDetails` variable.
+
+```javascript
+formController = $controller('ParkFormController', {
+  parkDetails: parkDetails
+});
+```
+
+Now we can specify `parkDetails` as a dependency of `ParkFormController` and initialize the controller's view model.
+
+```javascript
+// add 'parkDetails' to controller's dependencies
+ParkFormController.$inject = ['parkDetails', 'parkFactory', '$location'];
+
+function ParkFormController(parkDetails, parkFactory, $location) {
+
+  var vm = this;
+
+  vm.savePark = savePark;
+  // create parkDetails property (optional)
+  vm.parkDetails = undefined;
+
+  initialize();
+
+  function initialize() {
+    // assign value of parkDetails to view model property
+    vm.parkDetails = parkDetails;
+  }
+
+  function savePark(parkDetails) {
+    return parkFactory.save(parkDetails)
+      .then(function (saved) {
+        var route = '/parks/' + saved.id + '/details';
+        return $location.path(route);
+      });
+  }
+
+}
+
+```
+
+**Note that this couples our controller to our router.** `parkDetails` is not a stand-alone service or value, so outside of use with a route that resolves `parkDetails`, the Angular `$injector` will not be able to find a `provider` for `parkDetails` and the app will crash:
+
+```bash
+Error: [$injector:unpr] Unknown provider: parkDetailsProvider <- parkDetails <- ParkFormController
+```
+
+For the purposes of this guide, we are okay with this coupling. We are only going to use `ParkFormController` in the context of routes. We'll resolve `parkDetails` as an empty object for the `/new-park` route.
+
+```javascript
+describe('/new-park', function () {
+
+  var route = '/new-park';
+
+  beforeEach(function () {
+    $httpBackend.expectGET('/templates/edit-view.html')
+      .respond(200);
+  });
+
+  it('should load the edit view template');
+
+  it('should instantiate ParkFormController');
+
+  it('should resolve empty parkDetails', function () {
+
+    expect($route.current.resolve.parkDetails())
+        .to.deep.equal({});
+
+  });
+
+});
+```
+
+No need to rely on `$injector.invoke` here. This resolve function has no dependencies.
+
+```javascript
+.when('/new-park', {
+  templateUrl: '/templates/edit-view.html',
+  controller: 'ParkFormController',
+  resolve: {
+    parkDetails: function () { return {}; }
+  }
+})
 ```
 
 ### TODO
