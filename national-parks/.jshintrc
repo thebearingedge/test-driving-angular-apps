@@ -1,5 +1,6 @@
 {
   "globals": {
     "angular": true
-  }
+  },
+  "node": true
 }
