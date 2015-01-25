@@ -1,0 +1,6 @@
+div
+  div.list(ng-repeat='park in list.parkList')
+    h2
+      a(href='#/parks/{{ park.id }}/details')
+        | {{ park.name }} - {{ park.location }}
+    img(fades-in, ng-src='{{ park.imageUrl }}')

@@ -17,6 +17,7 @@
       .when('/parks', {
         templateUrl: '/templates/list-view.html',
         controller: 'ParkListController',
+        controllerAs: 'list',
         resolve: {
           parkList: resolveParkList
         }
@@ -31,6 +32,7 @@
       .when('/parks/:id/details', {
         templateUrl: '/templates/details-view.html',
         controller: 'ParkDetailsController',
+        controllerAs: 'view',
         resolve: {
           parkDetails: resolveParkDetails
         }
