@@ -1,6 +1,6 @@
 'use strict';
 
-describe('imageFader', function () {
+describe('fadesIn', function () {
 
   var $scope, $compile, img;
 
@@ -16,17 +16,17 @@ describe('imageFader', function () {
   });
 
   beforeEach(function () {
-    img = $compile('<img fades-in ng-src="">')($scope);
+    img = $compile('<img fades-in>')($scope);
   });
 
-  it('should start without class "in"', function () {
+  it('should start with class "fades" and without class "in"', function () {
 
     expect(img.attr('class')).to.include('fades');
     expect(img.attr('class')).not.to.include(' in');
 
   });
 
-  it('should add class "in"', function () {
+  it('should add class "in" on "load" event', function () {
 
     img.triggerHandler('load');
 

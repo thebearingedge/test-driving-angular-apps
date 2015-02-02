@@ -5,4 +5,10 @@
     'ngRoute'
   ]);
 
+  // runConfig.$inject = ['$compileProvider'];
+
+  // function runConfig($compileProvider) {
+  //   $compileProvider.debugInfoEnabled(false);
+  // }
+
 }());

@@ -1635,10 +1635,168 @@ No need to rely on `$injector.invoke` here. This resolve function has no depende
 })
 ```
 
+---
+
+### Directives
+
+Directives are the preferred method of DOM manipulation in AngularJS apps. We can use some helpful functions to verify the behavior of our custom directives.
+
+##### Attribute: Fade In Images on 'load' Event.
+
+We'd like to decorate `img` tags with an attribute directive that will cause them to "fade in" after the image fully downloaded. This will be accomplished with a CSS transition. The `img` tag should start with the class `.fades` when rendered and gain the class `.in` when the image is loaded and the element fires the `load` event.
+
+```javascript
+// national-parks/test/fadesInSpec.js
+
+describe('fadesIn', function () {
+
+  it('should start with class "fades" and without class "in"');
+
+  it('should add class "in" on "load" event');
+
+});
+```
+
+For this simple directive, we'll be leveraging the `$compile` service.
+
+```javascript
+  var $scope, $compile, img;
+
+  beforeEach(function () {
+
+    module('nationalParks');
+
+    inject(function ($rootScope, _$compile_) {
+      $scope = $rootScope.$new();
+      $compile = _$compile_;
+    });
+
+  });
+
+  beforeEach(function () {
+    img = $compile('<img fades-in>')($scope);
+  });
+```
+
+The `$compile` service will parse our HTML string for directives and curly brace `{{ }}` expressions. In the above tests, a fresh `$scope` is created to give the compiled element a clean context. Within the context of an app, the compiled element's `$scope` will be inherited from its parent controller, parent directive, the app's `$rootScope` or all-of-the-above. We are going to assume that our `fadesIn` directive will not be influenced by its parent `$scope`.
+
+After compilation, we have direct access to some properties on the element, including its attributes, via `attr`:
+
+```javascript
+it('should start with class "fades" and without class "in"', function () {
+
+  expect(img.attr('class')).to.include('fades');
+  expect(img.attr('class')).not.to.include(' in');
+
+});
+```
+
+The above test asserts the presence and absence of some substrings within the `class` attribute. Here's the desired failure, or close to it:
+
+```bash
+FAILED TESTS:
+  fadesIn
+    ✖ should start with class "fades" and without class "in"
+    AssertionError: expected 'ng-scope' to include 'fades'
+```
+
+Note: AngularJS adds some debug markup to the DOM unless otherwise specified at runtime. This debug markup includes `ng-scope` within the `class` attribute of our directive-enhanced `img` tag. Simply put, the element is missing the expected class `fades`.
+
+So let's fix that:
+
+```javascript
+// national-parks/src/components/fadesIn.js
+
+;(function () {
+  'use strict';
+
+  angular
+    .module('nationalParks')
+    .directive('fadesIn', fadesIn);
+
+  fadesIn.$inject = [];
+
+  function fadesIn() {
+
+    var ddo = {
+      // this directive will be an attribute
+      restrict: 'A',
+      link: link
+    };
+
+    return ddo;
+
+    // link function will update the DOM and register event listeners
+    function link(scope, elem, attrs) {
+
+      // add "fades" CSS class to the element during compilation
+      elem.addClass('fades');
+
+    }
+
+  }
+
+}());
+```
+
+With the above test passing, let's move on. We want to assert that on "load" the `img` tag will gain the `in` CSS class:
+
+```javascript
+it('should add class "in" on "load" event', function () {
+
+  img.triggerHandler('load');
+
+  expect(img.attr('class')).to.include('fades in');
+
+});
+```
+
+Angular's JQLite provides the handy `triggerHandler` method that we can call on compiled elements. Here's the passing directive:
+
+```javascript
+// national-parks/src/components/fadesIn.js
+ 
+;(function () {
+  'use strict';
+
+  angular
+    .module('nationalParks')
+    .directive('fadesIn', fadesIn);
+
+  fadesIn.$inject = [];
+
+  function fadesIn() {
+
+    var ddo = {
+      restrict: 'A',
+      link: link
+    };
+
+    return ddo;
+
+    function link(scope, elem, attrs) {
+
+      elem.addClass('fades');
+
+      // register event listener for "load" event and add class in callback
+      elem.on('load', function () {
+        elem.addClass('in');
+      });
+
+    }
+
+  }
+
+}());
+```
+
+##### Custom Element with Isolate Scope
+
+
+
 ### TODO
 
 - Filters
-- Directives
 - Gotchas
 - Misc. Tips
 - Attribution
