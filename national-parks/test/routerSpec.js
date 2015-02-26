@@ -2,7 +2,8 @@
 
 describe('router', function () {
 
-  var $location, $route, $rootScope, $httpBackend, mockParkFactory, parkFactory, parkDetails, parkList;
+  var $location, $route, $rootScope, $httpBackend,
+      mockParkFactory, parkFactory, parkDetails, parkList;
 
   beforeEach(function () {
 
@@ -22,15 +23,11 @@ describe('router', function () {
     inject(function ($q) {
 
       mockParkFactory.getOne = sinon.spy(function (id) {
-        return $q(function (resolve) {
-          resolve(parkDetails);
-        });
+        return $q.when(parkDetails);
       });
 
       mockParkFactory.getList = sinon.spy(function () {
-        return $q(function (resolve) {
-          resolve(parkList);
-        });
+        return $q.when(parkList);
       });
 
     });

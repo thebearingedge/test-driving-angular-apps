@@ -1,0 +1,22 @@
+{
+  "name": "hello-angular",
+  "version": "0.0.0",
+  "authors": [
+    "Tim Davis <thebearingedge@gmail.com>"
+  ],
+  "license": "MIT",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "angular": "1.3.10",
+    "angular-mocks": "1.3.10"
+  },
+  "resolutions": {
+    "angular": "1.3.10"
+  }
+}

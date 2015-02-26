@@ -11,6 +11,9 @@
 
     var ddo = {
       restrict: 'A',
+      scope: {
+        favorited: '='
+      },
       link: link
     };
 
