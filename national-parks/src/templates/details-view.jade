@@ -1,6 +1,8 @@
 div.details
   h1 {{ view.parkDetails.name }}
+  h2 {{ view.parkDetails.location }}
+  img(fades-in, ng-src='{{ view.parkDetails.imageUrl }}', style='max-width: 500px')
+  br
+  p {{ view.parkDetails.description }}
   a(href='#/parks/{{ view.parkDetails.id }}/edit')
     button(type='button') Edit
-  br
-  img(fades-in, ng-src='{{ view.parkDetails.imageUrl }}')

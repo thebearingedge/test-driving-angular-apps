@@ -25,6 +25,7 @@
       .when('/new-park', {
         templateUrl: '/templates/edit-view.html',
         controller: 'ParkFormController',
+        controllerAs: 'parkForm',
         resolve: {
           parkDetails: function () { return {}; }
         }
@@ -40,6 +41,7 @@
       .when('/parks/:id/edit', {
         templateUrl: '/templates/edit-view.html',
         controller: 'ParkFormController',
+        controllerAs: 'parkForm',
         resolve: {
           parkDetails: resolveParkDetails
         }

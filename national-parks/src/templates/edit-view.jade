@@ -1,1 +1,24 @@
-div
+form(ng-submit='parkForm.savePark(parkForm.parkDetails)')
+  label(for='name') Name
+  input#name(type='text', ng-model='parkForm.parkDetails.name')
+  br
+  br
+  label(for='location') Location
+  input#location(type='text', ng-model='parkForm.parkDetails.location')
+  br
+  br
+  label(for='image') Image
+  input#image(type='text', ng-model='parkForm.parkDetails.imageUrl')
+  br
+  br
+  label(for='description') Description
+  br
+  textarea#description(ng-model='parkForm.parkDetails.description')
+  br
+  br
+  | Image Preview
+  br
+  img(ng-src='{{ parkForm.parkDetails.imageUrl }}', style='max-width: 200px')
+  br
+  br
+  button(type='submit') Save
