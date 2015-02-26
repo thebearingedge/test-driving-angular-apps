@@ -77,7 +77,7 @@ app.listen(3000, function () {
 });
 
 function persistDB(database, callback) {
-  fs.writeFile('./data.json', JSON.stringify(database), function (err) {
+  fs.writeFile(__dirname + '/data.json', JSON.stringify(database), function (err) {
     if (err) throw err;
     return callback();
   });
