@@ -1,7 +1,11 @@
 Building A Simple AngularJS App, Test-First
 ----
+This guide is part of a presentation on testing Angular apps given at [AngularJS OC](http://www.meetup.com/AngularJS-OC/). Its primary purpose was a place to brain dump/self-check on the mechanics behind Angular testing, but it may be useful on its own. The guide centers on building a "National Parks" CRUD app in AngularJS 1.x with an emphasis on [BDD](http://en.wikipedia.org/wiki/Behavior-driven_development). As soon as I have time, I'll add some notes on building and launching the demo app. Maybe add a table of contents too.
 
-This is a work-in-progress guide to building a "National Parks" CRUD app in AngularJS 1.x with an emphasis on [BDD](http://en.wikipedia.org/wiki/Behavior-driven_development).
+Here are the [presentation slides](http://slides.com/thebearingedge/testing-angular-js).
+The source code for the live demos is in this repo as well.
+
+Big thanks to everyone who attended, everyone who wrote the code I'm using today (seriously, I'm having a blast!), [@markhuge](https://github.com/markhuge) for introducing me to testing, and [@locnguyen](https://github.com/locnguyen) for giving me the opportunity to present.
 
 ---
 
@@ -1789,16 +1793,4 @@ Angular's JQLite provides the handy `triggerHandler` method that we can call on 
 
 }());
 ```
-
-##### Custom Element with Isolate Scope
-
-
-
-### TODO
-
-- Filters
-- Gotchas
-- Misc. Tips
-- Attribution
-- Reading
 
